@@ -4,21 +4,23 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -30,6 +32,8 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -52,8 +56,10 @@ private val tabs = listOf(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen() {
+fun MainScreen(onNavigateToChat: (String) -> Unit = {}) {
     var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+    var pendingRequests by remember { mutableStateOf(samplePendingRequests()) }
+    var showRequestsDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -71,6 +77,28 @@ fun MainScreen() {
                                 .clip(CircleShape)
                                 .background(MaterialTheme.colorScheme.primary),
                         )
+                    }
+                },
+                actions = {
+                    if (selectedTab == 2) {
+                        Box {
+                            IconButton(onClick = { showRequestsDialog = true }) {
+                                Icon(
+                                    imageVector = Icons.Default.Notifications,
+                                    contentDescription = "Requests",
+                                )
+                            }
+                            if (pendingRequests.isNotEmpty()) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .offset(x = (-4).dp, y = 4.dp)
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.primary),
+                                )
+                            }
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -111,14 +139,49 @@ fun MainScreen() {
                 .padding(innerPadding),
             contentAlignment = Alignment.Center,
         ) {
-            PlaceholderContent(selectedTab)
+            PlaceholderContent(
+                tabIndex = selectedTab,
+                onNavigateToChat = onNavigateToChat,
+                pendingRequests = pendingRequests,
+                showRequestsDialog = showRequestsDialog,
+                onDismissRequests = { showRequestsDialog = false },
+                onAcceptRequest = { req ->
+                    pendingRequests = pendingRequests.filter { it.id != req.id }
+                    showRequestsDialog = false
+                },
+                onRejectRequest = { req ->
+                    pendingRequests = pendingRequests.filter { it.id != req.id }
+                },
+                onAddRequest = { req ->
+                    pendingRequests = pendingRequests + req
+                },
+            )
         }
     }
 }
 
 @Composable
-private fun PlaceholderContent(tabIndex: Int) {
+private fun PlaceholderContent(
+    tabIndex: Int,
+    onNavigateToChat: (String) -> Unit,
+    pendingRequests: List<Contact>,
+    showRequestsDialog: Boolean,
+    onDismissRequests: () -> Unit,
+    onAcceptRequest: (Contact) -> Unit,
+    onRejectRequest: (Contact) -> Unit,
+    onAddRequest: (Contact) -> Unit,
+) {
     when (tabIndex) {
+        0 -> MessengerContent(onChatClick = onNavigateToChat)
+        1 -> CallsContent()
+        2 -> ContactsContent(
+            pendingRequests = pendingRequests,
+            showRequestsDialog = showRequestsDialog,
+            onDismissRequests = onDismissRequests,
+            onAcceptRequest = onAcceptRequest,
+            onRejectRequest = onRejectRequest,
+            onAddRequest = onAddRequest,
+        )
         3 -> SettingsContent()
         else -> {
             Column(
@@ -140,4 +203,12 @@ private fun PlaceholderContent(tabIndex: Int) {
             }
         }
     }
+}
+
+@Suppress("SameParameterValue")
+private fun samplePendingRequests(): List<Contact> {
+    return listOf(
+        Contact("r1", "John Doe", "johndoe", "SL2601928374"),
+        Contact("r2", "", "new_user", "SL2602837461"),
+    )
 }

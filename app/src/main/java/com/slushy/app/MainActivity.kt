@@ -5,10 +5,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.slushy.app.ui.navigation.Screen
+import com.slushy.app.ui.screens.ChatDetailScreen
 import com.slushy.app.ui.screens.LoginScreen
 import com.slushy.app.ui.screens.MainScreen
 import com.slushy.app.ui.screens.RegisterScreen
@@ -70,7 +73,22 @@ fun SlushyApp() {
         }
 
         composable(Screen.Main.route) {
-            MainScreen()
+            MainScreen(
+                onNavigateToChat = { chatId ->
+                    navController.navigate("chat_detail/$chatId")
+                }
+            )
+        }
+
+        composable(
+            route = Screen.ChatDetail.route,
+            arguments = listOf(navArgument("chatId") { type = NavType.StringType }),
+        ) { backStackEntry ->
+            val chatId = backStackEntry.arguments?.getString("chatId") ?: return@composable
+            ChatDetailScreen(
+                chatId = chatId,
+                onBack = { navController.popBackStack() },
+            )
         }
     }
 }
